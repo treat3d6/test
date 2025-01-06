@@ -4,19 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Yeat Stats</title>
-    <script src="https://unpkg.com/react@18/umd/react.development.min.js" crossorigin></script>
-    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.min.js" crossorigin></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js" crossorigin></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js" crossorigin></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://unpkg.com/papaparse@5.4.1/papaparse.min.js"></script>
-    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/recharts@2.10.3/dist/Recharts.min.js" crossorigin></script>
-    <style>
-        @media (max-width: 640px) {
-            .table-container {
-                -webkit-overflow-scrolling: touch;
-            }
-        }
-    </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js"></script>
 </head>
 <body class="bg-black">
     <div id="root">
@@ -25,7 +17,6 @@
 
     <script type="text/babel">
         console.log('Script starting...');
-        const { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } = window.Recharts;
 
         const YeatStats = () => {
             const [loading, setLoading] = React.useState(true);
@@ -36,8 +27,11 @@
             React.useEffect(() => {
                 const loadData = async () => {
                     try {
+                        console.log('Starting data load...');
                         setLoading(true);
+                        
                         // Load dates.json
+                        console.log('Fetching dates.json...');
                         const response = await fetch('./dates.json');
                         if (!response.ok) throw new Error('Failed to load dates.json');
                         const data = await response.json();
@@ -48,16 +42,18 @@
                             const latestDate = data.dates[data.dates.length - 1];
                             setCurrentDate(latestDate);
                             
+                            console.log('Fetching CSV for date:', latestDate);
                             const csvResponse = await fetch(`./data/${latestDate}.csv`);
                             if (!csvResponse.ok) throw new Error('Failed to load CSV');
                             const text = await csvResponse.text();
+                            console.log('CSV loaded, first 100 chars:', text.substring(0, 100));
                             
-                            // Parse CSV with your actual column names
+                            // Parse CSV
                             Papa.parse(text, {
                                 header: true,
                                 skipEmptyLines: true,
                                 complete: (results) => {
-                                    console.log('Parsed CSV:', results.data[0]); // Log first row
+                                    console.log('Parse complete, first row:', results.data[0]);
                                     const processedSongs = results.data.map(row => ({
                                         title: row.Song,
                                         album: row.Album,
@@ -86,7 +82,7 @@
             if (loading) {
                 return (
                     <div className="text-white p-4">
-                        Loading data...
+                        Loading data... Please wait.
                     </div>
                 );
             }
@@ -95,19 +91,23 @@
                 return (
                     <div className="text-white p-4">
                         <h1 className="text-xl font-bold mb-4">Error Loading Data</h1>
-                        <pre className="text-red-500">{error}</pre>
+                        <pre className="text-red-500 whitespace-pre-wrap">{error}</pre>
+                        <div className="mt-4 text-sm">
+                            <p>Debug Info:</p>
+                            <p>Current URL: {window.location.href}</p>
+                        </div>
                     </div>
                 );
             }
 
             return (
                 <div className="text-white p-4">
-                    <h1 className="text-xl font-bold mb-4">Top Songs</h1>
+                    <h1 className="text-xl font-bold mb-4">Yeat Stats</h1>
                     <p className="mb-4">Last updated: {currentDate}</p>
                     <div className="overflow-x-auto">
                         <table className="min-w-full">
                             <thead>
-                                <tr>
+                                <tr className="border-b border-white/20">
                                     <th className="text-left p-2">Song</th>
                                     <th className="text-left p-2">Album</th>
                                     <th className="text-right p-2">Total Streams</th>

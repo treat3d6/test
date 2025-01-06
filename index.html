@@ -4,10 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Yeat Stats</title>
-    <!-- Load React first -->
     <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
-    <!-- Load other dependencies -->
     <script src="https://unpkg.com/papaparse@5.4.1/papaparse.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
@@ -24,17 +22,31 @@
         const TestComponent = () => {
             const [isError, setIsError] = React.useState(false);
             const [errorMessage, setErrorMessage] = React.useState('');
+            const [data, setData] = React.useState(null);
 
             React.useEffect(() => {
-                // Test file loading
                 const testLoad = async () => {
                     try {
-                        const response = await fetch('dates.json');
+                        console.log('Attempting to load dates.json...');
+                        const response = await fetch('./dates.json');
                         if (!response.ok) {
-                            throw new Error('Could not load dates.json');
+                            throw new Error(`Failed to load dates.json: ${response.status} ${response.statusText}`);
                         }
-                        const data = await response.json();
-                        console.log('Successfully loaded dates.json:', data);
+                        const jsonData = await response.json();
+                        console.log('Successfully loaded dates.json:', jsonData);
+                        setData(jsonData);
+
+                        // Try to load first CSV if dates exist
+                        if (jsonData.dates && jsonData.dates.length > 0) {
+                            const firstDate = jsonData.dates[0];
+                            console.log('Attempting to load CSV for date:', firstDate);
+                            const csvResponse = await fetch(`./data/${firstDate}.csv`);
+                            if (!csvResponse.ok) {
+                                throw new Error(`Failed to load CSV: ${csvResponse.status} ${csvResponse.statusText}`);
+                            }
+                            const csvText = await csvResponse.text();
+                            console.log('Successfully loaded CSV:', csvText.substring(0, 100));
+                        }
                     } catch (error) {
                         console.error('Error loading file:', error);
                         setIsError(true);
@@ -49,13 +61,16 @@
                 return (
                     <div style={{ color: 'white', padding: '20px' }}>
                         <h1>Error Loading Data</h1>
-                        <p>Make sure you have:</p>
-                        <ul style={{ listStyle: 'disc', paddingLeft: '20px' }}>
-                            <li>Uploaded dates.json to your repository</li>
-                            <li>Created the data folder with CSV files</li>
-                            <li>Are accessing through GitHub Pages URL</li>
-                        </ul>
-                        <p style={{ marginTop: '20px', color: 'red' }}>{errorMessage}</p>
+                        <p>Current location: {window.location.href}</p>
+                        <p>Error details:</p>
+                        <pre style={{ color: 'red', marginTop: '10px' }}>{errorMessage}</pre>
+                        <div style={{ marginTop: '20px' }}>
+                            <p>Expected files:</p>
+                            <ul style={{ listStyle: 'disc', paddingLeft: '20px', color: '#aaa' }}>
+                                <li>./dates.json</li>
+                                <li>./data/[date].csv</li>
+                            </ul>
+                        </div>
                     </div>
                 );
             }
@@ -63,7 +78,10 @@
             return (
                 <div style={{ color: 'white', padding: '20px' }}>
                     <h1>Test Component</h1>
-                    <p>React is working! Now checking file access...</p>
+                    <p>React is working! File loading status:</p>
+                    <pre style={{ marginTop: '10px' }}>
+                        {data ? JSON.stringify(data, null, 2) : 'Loading...'}
+                    </pre>
                 </div>
             );
         };
@@ -71,11 +89,8 @@
         window.addEventListener('load', function() {
             console.log('Window loaded...');
             try {
-                console.log('Creating root...');
                 const root = ReactDOM.createRoot(document.getElementById('root'));
-                console.log('Root created, attempting render...');
                 root.render(<TestComponent />);
-                console.log('Render complete!');
             } catch (error) {
                 console.error('Error during render:', error);
                 document.getElementById('root').innerHTML = `

@@ -101,12 +101,18 @@
                                 header: true,
                                 skipEmptyLines: true,
                                 complete: (results) => {
-                                    const processedSongs = results.data.map(row => ({
+                                    const processedSongs = results.data
+                                        .map(row => ({
                                         title: row.Song,
                                         album: row.Album,
                                         streams: parseInt(row['Spotify total'].replace(/,/g, '')) || 0,
                                         daily: parseInt(row['Spotify daily'].replace(/,/g, '')) || 0
-                                    }));
+                                            }))
+                                        .filter((song, index, self) =>
+                                    index === self.findIndex((s) => s.title === song.title && s.album === song.album)
+                                        );
+
+
                                     setSongs(processedSongs);
                                     calculateAlbumStats(processedSongs);
                                 }
@@ -283,7 +289,7 @@
                                 <tbody>
                                     {filteredData[activeTab].map((item, index) => (
                                         <tr 
-                                            key={item.title} 
+                                            key={`${item.title}-${item.album}`}
                                             className={`${index % 2 === 0 ? 'bg-black' : 'bg-white/5'} ${activeTab === 'songs' ? 'cursor-pointer hover:bg-white/10' : ''}`}
                                             onClick={() => activeTab === 'songs' && handleSongClick(item)}
                                         >

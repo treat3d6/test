@@ -290,7 +290,7 @@
                                         </th>
                                     </tr>
                                 </thead>
-                                <tbody>
+  <tbody>
     {filteredData[activeTab].map((item, index) => (
         <tr 
             key={`${item.title}-${item.album}`}
@@ -298,8 +298,9 @@
             onClick={() => activeTab === 'songs' && handleSongClick(item)}
         >
             <td className="px-2 sm:px-4 py-2 text-xs sm:text-sm text-white/60">
-                {index + 1}  {/* Always use the mapped index + 1 */}
+                {index + 1}
             </td>
+            {/* Add the rest of the table cells here */}
         </tr>
     ))}
 </tbody>

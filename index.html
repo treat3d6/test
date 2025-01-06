@@ -6,13 +6,16 @@
     <title>Yeat Stats History</title>
     
     <!-- Core Dependencies -->
-    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
     
     <!-- Additional Libraries -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/lodash.js/4.17.21/lodash.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/recharts/2.12.1/recharts.min.js"></script>
+    
+    <!-- Recharts and its dependencies -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/recharts/2.12.0/Recharts.js"></script>
     
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -61,48 +64,59 @@
 
             const handleFileUpload = (event) => {
                 const files = Array.from(event.target.files);
+                if (files.length === 0) return;
+                
                 setLoading(true);
                 setError(null);
-
                 const processedData = {};
                 let filesProcessed = 0;
 
                 files.forEach(file => {
                     const reader = new FileReader();
-                    const date = file.name.split('.')[0]; // Assumes YYYY-MM-DD.csv format
+                    // Extract date from filename (e.g., "2024-01-05.csv" -> "2024-01-05")
+                    const date = file.name.split('.')[0];
 
                     reader.onload = (e) => {
-                        Papa.parse(e.target.result, {
-                            header: true,
-                            skipEmptyLines: true,
-                            transformHeader: header => header.trim(),
-                            complete: (results) => {
-                                if (results.data && results.data.length > 0) {
-                                    const songs = results.data.map(row => ({
-                                        title: row.Song || '',
-                                        album: row.Album || '',
-                                        streams: parseInt((row['Spotify total'] || '0').replace(/,/g, '')) || 0,
-                                        daily: parseInt((row['Spotify daily'] || '0').replace(/,/g, '')) || 0,
-                                        date
-                                    }));
-                                    processedData[date] = songs;
-                                }
+                        try {
+                            Papa.parse(e.target.result, {
+                                header: true,
+                                skipEmptyLines: true,
+                                transformHeader: header => header.trim(),
+                                complete: (results) => {
+                                    if (results.data && results.data.length > 0) {
+                                        const songs = results.data.map(row => ({
+                                            title: row.Song || '',
+                                            album: row.Album || '',
+                                            streams: parseInt((row['Spotify total'] || '0').replace(/,/g, '')) || 0,
+                                            daily: parseInt((row['Spotify daily'] || '0').replace(/,/g, '')) || 0,
+                                            date
+                                        }));
+                                        processedData[date] = songs;
+                                    }
 
-                                filesProcessed++;
-                                if (filesProcessed === files.length) {
-                                    setHistoricalData(processedData);
-                                    const dates = Object.keys(processedData).sort();
-                                    const latestDate = dates[dates.length - 1];
-                                    setSongs(processedData[latestDate]);
-                                    calculateStats(processedData[latestDate]);
+                                    filesProcessed++;
+                                    if (filesProcessed === files.length) {
+                                        setHistoricalData(processedData);
+                                        
+                                        // Use the most recent date's data for current view
+                                        const dates = Object.keys(processedData).sort();
+                                        const latestDate = dates[dates.length - 1];
+                                        setSongs(processedData[latestDate]);
+                                        calculateStats(processedData[latestDate]);
+                                        setLoading(false);
+                                    }
+                                },
+                                error: (error) => {
+                                    console.error('Parse error:', error);
+                                    setError(`Error parsing ${file.name}: ${error.message}`);
                                     setLoading(false);
                                 }
-                            },
-                            error: (error) => {
-                                setError(`Error parsing ${file.name}: ${error.message}`);
-                                setLoading(false);
-                            }
-                        });
+                            });
+                        } catch (error) {
+                            console.error('Processing error:', error);
+                            setError(`Error processing ${file.name}: ${error.message}`);
+                            setLoading(false);
+                        }
                     };
 
                     reader.onerror = () => {
@@ -250,7 +264,7 @@
                             <div className="text-center py-8 text-gray-400">
                                 Loading data... Please wait.
                             </div>
-                        ) : (
+                        ) : songs.length > 0 ? (
                             <>
                                 <div className="overflow-x-auto mb-8">
                                     <table className="min-w-full">
@@ -416,6 +430,10 @@
                                     </table>
                                 </div>
                             </>
+                        ) : (
+                            <div className="text-center py-8 text-gray-400">
+                                Upload CSV files to view stats and historical data
+                            </div>
                         )}
                     </div>
                 </div>

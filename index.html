@@ -8,11 +8,15 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js"></script>
+    <script src="https://unpkg.com/recharts@2.10.3/dist/Recharts.js"></script>
 </head>
 <body class="bg-black">
     <div id="root"></div>
 
     <script type="text/babel">
+        // Get Recharts components
+        const { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } = window.Recharts;
+
         const YeatStats = () => {
             const [activeTab, setActiveTab] = React.useState('songs');
             const [searchTerm, setSearchTerm] = React.useState('');
@@ -102,17 +106,15 @@
                                 skipEmptyLines: true,
                                 complete: (results) => {
                                     const processedSongs = results.data
-    .map(row => ({
-        title: row.Song,
-        album: row.Album || 'Unknown Album',
-        streams: parseInt(row['Spotify total'].replace(/,/g, '')) || 0,
-        daily: parseInt(row['Spotify daily'].replace(/,/g, '')) || 0
-    }))
-    .filter((song, index, self) =>
-        index === self.findIndex((s) => s.title === song.title && s.album === song.album)
-    );
-
-
+                                        .map(row => ({
+                                            title: row.Song,
+                                            album: row.Album || 'Unknown Album',
+                                            streams: parseInt(row['Spotify total'].replace(/,/g, '')) || 0,
+                                            daily: parseInt(row['Spotify daily'].replace(/,/g, '')) || 0
+                                        }))
+                                        .filter((song, index, self) =>
+                                            index === self.findIndex((s) => s.title === song.title && s.album === song.album)
+                                        );
                                     setSongs(processedSongs);
                                     calculateAlbumStats(processedSongs);
                                 }
@@ -142,40 +144,38 @@
             };
 
             const requestSort = (key) => {
-    let direction = 'desc';
-    if (sortConfig.key === key && sortConfig.direction === 'desc') {
-        direction = 'asc';
-    }
-    setSortConfig({ key, direction });
-};
+                let direction = 'desc';
+                if (sortConfig.key === key && sortConfig.direction === 'desc') {
+                    direction = 'asc';
+                }
+                setSortConfig({ key, direction });
+            };
 
+            const getSortedData = (data) => {
+                if (!sortConfig.key) return data;
 
- const getSortedData = (data) => {
-    if (!sortConfig.key) return data;
+                return [...data].sort((a, b) => {
+                    let aValue = a[sortConfig.key];
+                    let bValue = b[sortConfig.key];
 
-    return [...data].sort((a, b) => {
-        let aValue = a[sortConfig.key] || ''; // Fallback for undefined
-        let bValue = b[sortConfig.key] || ''; // Fallback for undefined
+                    if (sortConfig.key === 'streams' || sortConfig.key === 'daily') {
+                        aValue = parseInt(aValue.toString().replace(/,/g, '')) || 0;
+                        bValue = parseInt(bValue.toString().replace(/,/g, '')) || 0;
+                    }
 
-        if (sortConfig.key === 'streams' || sortConfig.key === 'daily') {
-            aValue = parseInt(aValue.toString().replace(/,/g, '')) || 0;
-            bValue = parseInt(bValue.toString().replace(/,/g, '')) || 0;
-        }
+                    if (sortConfig.key === 'title' || sortConfig.key === 'album') {
+                        if (sortConfig.direction === 'asc') {
+                            return aValue.toString().localeCompare(bValue.toString());
+                        }
+                        return bValue.toString().localeCompare(aValue.toString());
+                    }
 
-        if (sortConfig.key === 'title' || sortConfig.key === 'album') {
-            if (sortConfig.direction === 'asc') {
-                return aValue.localeCompare(bValue);
-            }
-            return bValue.localeCompare(aValue);
-        }
-
-        if (sortConfig.direction === 'asc') {
-            return aValue - bValue;
-        }
-        return bValue - aValue;
-    });
-};
-
+                    if (sortConfig.direction === 'asc') {
+                        return aValue - bValue;
+                    }
+                    return bValue - aValue;
+                });
+            };
 
             const filteredData = {
                 songs: getSortedData(songs.filter(song => 
@@ -336,6 +336,41 @@
                                     </div>
                                 ) : (
                                     <div className="space-y-4">
+                                        <div className="h-64 w-full bg-black/20 rounded-lg overflow-hidden">
+                                            <ResponsiveContainer width="100%" height="100%">
+                                                <LineChart data={songHistory}>
+                                                    <CartesianGrid strokeDasharray="3 3" stroke="#ffffff20" />
+                                                    <XAxis 
+                                                        dataKey="date" 
+                                                        stroke="#ffffff80"
+                                                        tick={{ fill: '#ffffff80' }}
+                                                    />
+                                                    <YAxis 
+                                                        stroke="#ffffff80"
+                                                        tick={{ fill: '#ffffff80' }}
+                                                        tickFormatter={(value) => (value / 1000000).toFixed(1) + 'M'}
+                                                    />
+                                                    <Tooltip 
+                                                        contentStyle={{ 
+                                                            backgroundColor: '#000000', 
+                                                            border: '1px solid #ffffff20',
+                                                            color: '#ffffff'
+                                                        }}
+                                                        formatter={(value) => [value.toLocaleString(), 'Streams']}
+                                                        labelFormatter={(label) => `Date: ${label}`}
+                                                    />
+                                                    <Line 
+                                                        type="monotone" 
+                                                        dataKey="streams" 
+                                                        stroke="#3b82f6" 
+                                                        fill="#3b82f680"
+                                                        strokeWidth={2}
+                                                        dot={false}
+                                                    />
+                                                </LineChart>
+                                            </ResponsiveContainer>
+                                        </div>
+                                        
                                         <div className="overflow-x-auto">
                                             <table className="min-w-full">
                                                 <thead>

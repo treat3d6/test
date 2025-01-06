@@ -3,446 +3,116 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Yeat Stats History</title>
-    
-    <!-- Core Dependencies -->
-    <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
-    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
-    
-    <!-- Additional Libraries -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/lodash.js/4.17.21/lodash.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
-    
-    <!-- Recharts and its dependencies -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/recharts/2.12.0/Recharts.js"></script>
-    
-    <!-- Tailwind CSS -->
+    <title>Yeat Stats</title>
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/papaparse/5.4.1/papaparse.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
-    
-    <!-- Babel for JSX -->
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 </head>
 <body class="bg-gray-900">
     <div id="root"></div>
 
     <script type="text/babel">
-        const { useState } = React;
-        const { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } = Recharts;
-
-        const YeatStatsHistory = () => {
-            const [activeTab, setActiveTab] = useState('songs');
-            const [searchTerm, setSearchTerm] = useState('');
-            const [sortConfig, setSortConfig] = useState({
-                key: 'streams',
-                direction: 'desc'
-            });
-            const [songs, setSongs] = useState([]);
-            const [historicalData, setHistoricalData] = useState({});
-            const [selectedSong, setSelectedSong] = useState(null);
-            const [loading, setLoading] = useState(false);
-            const [error, setError] = useState(null);
-            const [statsData, setStatsData] = useState({
-                headers: ['Total', 'As lead', 'Solo', 'As feature (*)'],
-                rows: [
-                    { label: 'Streams', values: [0, 0, 0, 0] },
-                    { label: 'Daily', values: [0, 0, 0, 0] },
-                    { label: 'Tracks', values: [0, 0, 0, 0] }
-                ]
-            });
-            const [albums, setAlbums] = useState([
-                { title: "Up 2 Më", streams: 0, daily: 0, tracks: 0 },
-                { title: "Lyfë", streams: 0, daily: 0, tracks: 0 },
-                { title: "2 Alivë", streams: 0, daily: 0, tracks: 0 },
-                { title: "2093", streams: 0, daily: 0, tracks: 0 },
-                { title: "AftërLyfe", streams: 0, daily: 0, tracks: 0 },
-                { title: "4L", streams: 0, daily: 0, tracks: 0 },
-                { title: "Trëndi", streams: 0, daily: 0, tracks: 0 },
-                { title: "Alivë", streams: 0, daily: 0, tracks: 0 },
-                { title: "LYFESTYLE", streams: 0, daily: 0, tracks: 0 }
-            ]);
+        function App() {
+            const [songs, setSongs] = React.useState([]);
+            const [error, setError] = React.useState(null);
 
             const handleFileUpload = (event) => {
                 const files = Array.from(event.target.files);
                 if (files.length === 0) return;
-                
-                setLoading(true);
-                setError(null);
+
                 const processedData = {};
-                let filesProcessed = 0;
 
                 files.forEach(file => {
                     const reader = new FileReader();
-                    // Extract date from filename (e.g., "2024-01-05.csv" -> "2024-01-05")
-                    const date = file.name.split('.')[0];
-
                     reader.onload = (e) => {
                         try {
                             Papa.parse(e.target.result, {
                                 header: true,
                                 skipEmptyLines: true,
-                                transformHeader: header => header.trim(),
                                 complete: (results) => {
-                                    if (results.data && results.data.length > 0) {
-                                        const songs = results.data.map(row => ({
-                                            title: row.Song || '',
-                                            album: row.Album || '',
-                                            streams: parseInt((row['Spotify total'] || '0').replace(/,/g, '')) || 0,
-                                            daily: parseInt((row['Spotify daily'] || '0').replace(/,/g, '')) || 0,
-                                            date
-                                        }));
-                                        processedData[date] = songs;
-                                    }
-
-                                    filesProcessed++;
-                                    if (filesProcessed === files.length) {
-                                        setHistoricalData(processedData);
-                                        
-                                        // Use the most recent date's data for current view
-                                        const dates = Object.keys(processedData).sort();
-                                        const latestDate = dates[dates.length - 1];
-                                        setSongs(processedData[latestDate]);
-                                        calculateStats(processedData[latestDate]);
-                                        setLoading(false);
-                                    }
+                                    console.log('Parsed data:', results.data);
+                                    setSongs(results.data);
                                 },
                                 error: (error) => {
                                     console.error('Parse error:', error);
-                                    setError(`Error parsing ${file.name}: ${error.message}`);
-                                    setLoading(false);
+                                    setError(error.message);
                                 }
                             });
                         } catch (error) {
                             console.error('Processing error:', error);
-                            setError(`Error processing ${file.name}: ${error.message}`);
-                            setLoading(false);
+                            setError(error.message);
                         }
                     };
 
                     reader.onerror = () => {
-                        setError(`Error reading ${file.name}`);
-                        setLoading(false);
+                        setError(`Error reading file`);
                     };
 
                     reader.readAsText(file);
                 });
             };
 
-            const calculateStats = (processedSongs) => {
-                const totalStreams = processedSongs.reduce((sum, song) => sum + song.streams, 0);
-                const totalDaily = processedSongs.reduce((sum, song) => sum + song.daily, 0);
-                const totalTracks = processedSongs.length;
-
-                const featureTracks = processedSongs.filter(song => song.album === "Features");
-                const featureStreams = featureTracks.reduce((sum, song) => sum + song.streams, 0);
-                const featureDaily = featureTracks.reduce((sum, song) => sum + song.daily, 0);
-                const featureCount = featureTracks.length;
-
-                const leadTracks = processedSongs.filter(song => song.album !== "Features");
-                const leadStreams = leadTracks.reduce((sum, song) => sum + song.streams, 0);
-                const leadDaily = leadTracks.reduce((sum, song) => sum + song.daily, 0);
-                const leadCount = leadTracks.length;
-
-                const soloTracks = leadTracks.filter(song => !song.title.toLowerCase().includes("feat."));
-                const soloStreams = soloTracks.reduce((sum, song) => sum + song.streams, 0);
-                const soloDaily = soloTracks.reduce((sum, song) => sum + song.daily, 0);
-                const soloCount = soloTracks.length;
-
-                setStatsData({
-                    headers: statsData.headers,
-                    rows: [
-                        { label: 'Streams', values: [totalStreams, leadStreams, soloStreams, featureStreams] },
-                        { label: 'Daily', values: [totalDaily, leadDaily, soloDaily, featureDaily] },
-                        { label: 'Tracks', values: [totalTracks, leadCount, soloCount, featureCount] }
-                    ]
-                });
-
-                const albumStats = albums.map(album => {
-                    const albumSongs = processedSongs.filter(song => song.album === album.title);
-                    return {
-                        title: album.title,
-                        streams: albumSongs.reduce((sum, song) => sum + song.streams, 0),
-                        daily: albumSongs.reduce((sum, song) => sum + song.daily, 0),
-                        tracks: albumSongs.length
-                    };
-                });
-                setAlbums(albumStats);
-            };
-
-            const formatNumber = (num) => num.toLocaleString('en-US');
-
-            const requestSort = (key) => {
-                let direction = 'desc';
-                if (sortConfig.key === key && sortConfig.direction === 'desc') {
-                    direction = 'asc';
-                }
-                setSortConfig({ key, direction });
-            };
-
-            const getSortedData = (data) => {
-                if (!sortConfig.key) return data;
-
-                return [...data].sort((a, b) => {
-                    if (sortConfig.key === 'title' || sortConfig.key === 'album') {
-                        const aValue = a[sortConfig.key] || '';
-                        const bValue = b[sortConfig.key] || '';
-                        return sortConfig.direction === 'asc' 
-                            ? aValue.localeCompare(bValue)
-                            : bValue.localeCompare(aValue);
-                    }
-                    
-                    return sortConfig.direction === 'asc'
-                        ? a[sortConfig.key] - b[sortConfig.key]
-                        : b[sortConfig.key] - a[sortConfig.key];
-                });
-            };
-
-            const getSongHistory = (songTitle) => {
-                const history = [];
-                Object.entries(historicalData).forEach(([date, songs]) => {
-                    const song = songs.find(s => s.title === songTitle);
-                    if (song) {
-                        history.push({
-                            date,
-                            streams: song.streams,
-                            daily: song.daily
-                        });
-                    }
-                });
-                return _.sortBy(history, 'date');
-            };
-
-            const handleSongClick = (song) => {
-                setSelectedSong(song);
-            };
-
-            const filteredData = {
-                songs: getSortedData(songs.filter(song => 
-                    song.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                    song.album.toLowerCase().includes(searchTerm.toLowerCase())
-                )),
-                albums: getSortedData(albums.filter(album =>
-                    album.title.toLowerCase().includes(searchTerm.toLowerCase())
-                ))
-            };
-
-            const getSortIndicator = (key) => {
-                if (sortConfig.key === key) {
-                    return sortConfig.direction === 'asc' ? ' ↑' : ' ↓';
-                }
-                return '';
-            };
-
             return (
                 <div className="w-full max-w-6xl mx-auto p-6">
                     <div className="bg-gray-800 rounded-lg shadow-xl p-6">
-                        <div className="mb-8">
-                            <h1 className="text-2xl font-bold mb-2 text-white">Yeat Stats History</h1>
-                            <div className="flex items-center gap-4">
-                                <label className="px-4 py-2 bg-blue-500 text-white rounded-lg cursor-pointer hover:bg-blue-600">
-                                    Upload CSV Files
-                                    <input
-                                        type="file"
-                                        multiple
-                                        accept=".csv"
-                                        className="hidden"
-                                        onChange={handleFileUpload}
-                                    />
-                                </label>
-                                <p className="text-sm text-gray-400">
-                                    Upload multiple CSV files named as YYYY-MM-DD.csv
-                                </p>
-                            </div>
-                            {error && (
-                                <div className="mt-2 text-red-400">
-                                    Error: {error}
-                                </div>
-                            )}
+                        <h1 className="text-2xl font-bold mb-4 text-white">Yeat Stats</h1>
+                        
+                        <div className="mb-4">
+                            <label className="px-4 py-2 bg-blue-500 text-white rounded-lg cursor-pointer hover:bg-blue-600">
+                                Upload CSV Files
+                                <input
+                                    type="file"
+                                    multiple
+                                    accept=".csv"
+                                    className="hidden"
+                                    onChange={handleFileUpload}
+                                />
+                            </label>
                         </div>
 
-                        {loading ? (
-                            <div className="text-center py-8 text-gray-400">
-                                Loading data... Please wait.
+                        {error && (
+                            <div className="text-red-500 mb-4">
+                                Error: {error}
                             </div>
-                        ) : songs.length > 0 ? (
-                            <>
-                                <div className="overflow-x-auto mb-8">
-                                    <table className="min-w-full">
-                                        <thead>
-                                            <tr>
-                                                <th className="text-left px-4 py-2 text-gray-300"></th>
-                                                {statsData.headers.map((header, index) => (
-                                                    <th key={index} className="text-right px-4 py-2 text-gray-300">
-                                                        {header}
-                                                    </th>
-                                                ))}
+                        )}
+
+                        {songs.length > 0 && (
+                            <div className="overflow-x-auto">
+                                <table className="min-w-full">
+                                    <thead>
+                                        <tr className="bg-gray-700">
+                                            <th className="text-left px-4 py-2 text-gray-300">Song</th>
+                                            <th className="text-left px-4 py-2 text-gray-300">Album</th>
+                                            <th className="text-right px-4 py-2 text-gray-300">Streams</th>
+                                            <th className="text-right px-4 py-2 text-gray-300">Daily</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {songs.map((song, index) => (
+                                            <tr key={index} className={index % 2 === 0 ? 'bg-gray-800' : 'bg-gray-700'}>
+                                                <td className="px-4 py-2 text-white">{song.Song}</td>
+                                                <td className="px-4 py-2 text-gray-400">{song.Album}</td>
+                                                <td className="text-right px-4 py-2 text-gray-300">
+                                                    {parseInt(song['Spotify total']?.replace(/,/g, '') || '0').toLocaleString()}
+                                                </td>
+                                                <td className="text-right px-4 py-2 text-gray-300">
+                                                    {parseInt(song['Spotify daily']?.replace(/,/g, '') || '0').toLocaleString()}
+                                                </td>
                                             </tr>
-                                        </thead>
-                                        <tbody>
-                                            {statsData.rows.map((row, index) => (
-                                                <tr key={index} className={index % 2 === 0 ? 'bg-gray-800' : 'bg-gray-700'}>
-                                                    <td className="px-4 py-2 font-medium text-gray-300">{row.label}</td>
-                                                    {row.values.map((value, valueIndex) => (
-                                                        <td key={valueIndex} className="text-right px-4 py-2 text-gray-300">
-                                                            {formatNumber(value)}
-                                                        </td>
-                                                    ))}
-                                                </tr>
-                                            ))}
-                                        </tbody>
-                                    </table>
-                                </div>
-
-                                {selectedSong && (
-                                    <div className="mb-8">
-                                        <h2 className="text-xl font-bold mb-4 text-white">
-                                            {selectedSong.title} - Historical Data
-                                        </h2>
-                                        <div className="h-96">
-                                            <ResponsiveContainer width="100%" height="100%">
-                                                <LineChart
-                                                    data={getSongHistory(selectedSong.title)}
-                                                    margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
-                                                >
-                                                    <CartesianGrid strokeDasharray="3 3" />
-                                                    <XAxis dataKey="date" />
-                                                    <YAxis yAxisId="left" />
-                                                    <YAxis yAxisId="right" orientation="right" />
-                                                    <Tooltip />
-                                                    <Legend />
-                                                    <Line
-                                                        yAxisId="left"
-                                                        type="monotone"
-                                                        dataKey="streams"
-                                                        stroke="#8884d8"
-                                                        name="Total Streams"
-                                                    />
-                                                    <Line
-                                                        yAxisId="right"
-                                                        type="monotone"
-                                                        dataKey="daily"
-                                                        stroke="#82ca9d"
-                                                        name="Daily Streams"
-                                                    />
-                                                </LineChart>
-                                            </ResponsiveContainer>
-                                        </div>
-                                    </div>
-                                )}
-
-                                <div className="flex justify-between items-center mb-6">
-                                    <div className="flex gap-4">
-                                        <button 
-                                            className={`px-6 py-2 font-medium rounded-lg transition-colors ${
-                                                activeTab === 'songs' 
-                                                ? 'bg-blue-500 hover:bg-blue-600 text-white' 
-                                                : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-                                            }`}
-                                            onClick={() => setActiveTab('songs')}
-                                        >
-                                            Songs
-                                        </button>
-                                        <button 
-                                            className={`px-6 py-2 font-medium rounded-lg transition-colors ${
-                                                activeTab === 'albums' 
-                                                ? 'bg-blue-500 hover:bg-blue-600 text-white' 
-                                                : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-                                            }`}
-                                            onClick={() => setActiveTab('albums')}
-                                        >
-                                            Albums
-                                        </button>
-                                    </div>
-                                    <input
-                                        type="text"
-                                        placeholder="Search..."
-                                        className="px-4 py-2 rounded-lg border border-gray-600 bg-gray-700 text-gray-200 placeholder-gray-400 focus:outline-none focus:border-blue-500"
-                                        value={searchTerm}
-                                        onChange={(e) => setSearchTerm(e.target.value)}
-                                    />
-                                </div>
-
-                                <div className="overflow-x-auto">
-                                    <table className="min-w-full">
-                                        <thead>
-                                            <tr className="bg-gray-700">
-                                                <th className="text-left px-4 py-2 text-gray-300">#</th>
-                                                <th 
-                                                    className="text-left px-4 py-2 cursor-pointer hover:bg-gray-600 text-gray-300"
-                                                    onClick={() => requestSort('title')}
-                                                >
-                                                    {activeTab === 'songs' ? 'Song' : 'Album'} Title
-                                                    {getSortIndicator('title')}
-                                                </th>
-                                                {activeTab === 'songs' && (
-                                                    <th 
-                                                        className="text-left px-4 py-2 cursor-pointer hover:bg-gray-600 text-gray-300"
-                                                        onClick={() => requestSort('album')}
-                                                    >
-                                                        Album{getSortIndicator('album')}
-                                                    </th>
-                                                )}
-                                                {activeTab === 'albums' && (
-                                                    <th className="text-right px-4 py-2 text-gray-300">Tracks</th>
-                                                )}
-                                                <th 
-                                                    className="text-right px-4 py-2 cursor-pointer hover:bg-gray-600 text-gray-300"
-                                                    onClick={() => requestSort('streams')}
-                                                >
-                                                    Streams{getSortIndicator('streams')}
-                                                </th>
-                                                <th 
-                                                    className="text-right px-4 py-2 cursor-pointer hover:bg-gray-600 text-gray-300"
-                                                    onClick={() => requestSort('daily')}
-                                                >
-                                                    Daily{getSortIndicator('daily')}
-                                                </th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            {filteredData[activeTab].map((item, index) => (
-                                                <tr 
-                                                    key={item.title + index} 
-                                                    className={`${index % 2 === 0 ? 'bg-gray-800' : 'bg-gray-700'} ${
-                                                        activeTab === 'songs' ? 'cursor-pointer hover:bg-gray-600' : ''
-                                                    }`}
-                                                    onClick={() => activeTab === 'songs' && handleSongClick(item)}
-                                                >
-                                                    <td className="px-4 py-2 text-gray-300">{index + 1}</td>
-                                                    <td className="px-4 py-2 text-white">
-                                                        {item.title}
-                                                    </td>
-                                                    {activeTab === 'songs' && (
-                                                        <td className="px-4 py-2 text-gray-400">{item.album}</td>
-                                                    )}
-                                                    {activeTab === 'albums' && (
-                                                        <td className="text-right px-4 py-2 text-gray-300">{item.tracks}</td>
-                                                    )}
-                                                    <td className="text-right px-4 py-2 text-gray-300">
-                                                        {formatNumber(item.streams)}
-                                                    </td>
-                                                    <td className="text-right px-4 py-2 text-gray-300">
-                                                        {formatNumber(item.daily)}
-                                                    </td>
-                                                </tr>
-                                            ))}
-                                        </tbody>
-                                    </table>
-                                </div>
-                            </>
-                        ) : (
-                            <div className="text-center py-8 text-gray-400">
-                                Upload CSV files to view stats and historical data
+                                        ))}
+                                    </tbody>
+                                </table>
                             </div>
                         )}
                     </div>
                 </div>
             );
-        };
+        }
 
-        // Initialize the app
         const root = ReactDOM.createRoot(document.getElementById('root'));
-        root.render(<YeatStatsHistory />);
+        root.render(<App />);
     </script>
 </body>
 </html>

@@ -9,7 +9,7 @@
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-    <script src="https://unpkg.com/recharts@2.10.3/umd/Recharts.js"></script>
+    <script src="https://unpkg.com/recharts@2.10.3/dist/Recharts.min.js"></script>
     <style>
         @media (max-width: 640px) {
             .table-container {
@@ -22,7 +22,11 @@
     <div id="root"></div>
 
     <script type="text/babel">
-        const { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } = Recharts;
+        // Extract Recharts components from the global window.Recharts object
+        const { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } = window.Recharts;
+        
+        // Debug log to verify Recharts components
+        console.log('Recharts components:', { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer });
 
         const YeatStats = () => {
             const [activeTab, setActiveTab] = React.useState('songs');

@@ -13,25 +13,61 @@
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <script src="https://unpkg.com/recharts@2.10.3/dist/Recharts.min.js"></script>
 </head>
-<body>
-    <!-- Change background color to see if styles are loading -->
-    <div id="root" style="min-height: 100vh;">Loading...</div>
+<body style="background-color: black;">
+    <div id="root">
+        <div style="color: white; padding: 20px;">Loading...</div>
+    </div>
 
     <script type="text/babel">
         console.log('Script starting...');
 
-        // Simple test component to verify React is working
         const TestComponent = () => {
-            console.log('TestComponent rendering...');
+            const [isError, setIsError] = React.useState(false);
+            const [errorMessage, setErrorMessage] = React.useState('');
+
+            React.useEffect(() => {
+                // Test file loading
+                const testLoad = async () => {
+                    try {
+                        const response = await fetch('dates.json');
+                        if (!response.ok) {
+                            throw new Error('Could not load dates.json');
+                        }
+                        const data = await response.json();
+                        console.log('Successfully loaded dates.json:', data);
+                    } catch (error) {
+                        console.error('Error loading file:', error);
+                        setIsError(true);
+                        setErrorMessage(error.toString());
+                    }
+                };
+
+                testLoad();
+            }, []);
+
+            if (isError) {
+                return (
+                    <div style={{ color: 'white', padding: '20px' }}>
+                        <h1>Error Loading Data</h1>
+                        <p>Make sure you have:</p>
+                        <ul style={{ listStyle: 'disc', paddingLeft: '20px' }}>
+                            <li>Uploaded dates.json to your repository</li>
+                            <li>Created the data folder with CSV files</li>
+                            <li>Are accessing through GitHub Pages URL</li>
+                        </ul>
+                        <p style={{ marginTop: '20px', color: 'red' }}>{errorMessage}</p>
+                    </div>
+                );
+            }
+
             return (
                 <div style={{ color: 'white', padding: '20px' }}>
                     <h1>Test Component</h1>
-                    <p>If you can see this, React is working!</p>
+                    <p>React is working! Now checking file access...</p>
                 </div>
             );
         };
 
-        // Wait for document to load
         window.addEventListener('load', function() {
             console.log('Window loaded...');
             try {
@@ -42,7 +78,6 @@
                 console.log('Render complete!');
             } catch (error) {
                 console.error('Error during render:', error);
-                // Display error on page
                 document.getElementById('root').innerHTML = `
                     <div style="color: white; padding: 20px;">
                         <h1>Error Loading Application</h1>

@@ -102,15 +102,15 @@
                                 skipEmptyLines: true,
                                 complete: (results) => {
                                     const processedSongs = results.data
-                                        .map(row => ({
-                                        title: row.Song,
-                                        album: row.Album,
-                                        streams: parseInt(row['Spotify total'].replace(/,/g, '')) || 0,
-                                        daily: parseInt(row['Spotify daily'].replace(/,/g, '')) || 0
-                                            }))
-                                        .filter((song, index, self) =>
-                                    index === self.findIndex((s) => s.title === song.title && s.album === song.album)
-                                        );
+    .map(row => ({
+        title: row.Song,
+        album: row.Album || 'Unknown Album',
+        streams: parseInt(row['Spotify total'].replace(/,/g, '')) || 0,
+        daily: parseInt(row['Spotify daily'].replace(/,/g, '')) || 0
+    }))
+    .filter((song, index, self) =>
+        index === self.findIndex((s) => s.title === song.title && s.album === song.album)
+    );
 
 
                                     setSongs(processedSongs);
@@ -142,25 +142,24 @@
             };
 
             const requestSort = (key) => {
-                let direction = 'desc';
-                if (sortConfig.key === key && sortConfig.direction === 'desc') {
-                    direction = 'asc';
-                }
-                setSortConfig({ key, direction });
-            };
+    let direction = 'desc';
+    if (sortConfig.key === key && sortConfig.direction === 'desc') {
+        direction = 'asc';
+    }
+    setSortConfig({ key, direction });
+};
 
-            const getSortedData = (data) => {
+
+ const getSortedData = (data) => {
     if (!sortConfig.key) return data;
 
     return [...data].sort((a, b) => {
-        // Convert strings to numbers for stream and daily comparisons
-        let aValue = a[sortConfig.key];
-        let bValue = b[sortConfig.key];
-        
+        let aValue = a[sortConfig.key] || ''; // Fallback for undefined
+        let bValue = b[sortConfig.key] || ''; // Fallback for undefined
+
         if (sortConfig.key === 'streams' || sortConfig.key === 'daily') {
-            // Make sure we're comparing numbers
-            aValue = parseInt(aValue.toString().replace(/,/g, ''));
-            bValue = parseInt(bValue.toString().replace(/,/g, ''));
+            aValue = parseInt(aValue.toString().replace(/,/g, '')) || 0;
+            bValue = parseInt(bValue.toString().replace(/,/g, '')) || 0;
         }
 
         if (sortConfig.key === 'title' || sortConfig.key === 'album') {
@@ -169,13 +168,14 @@
             }
             return bValue.localeCompare(aValue);
         }
-        
+
         if (sortConfig.direction === 'asc') {
             return aValue - bValue;
         }
         return bValue - aValue;
     });
 };
+
 
             const filteredData = {
                 songs: getSortedData(songs.filter(song => 

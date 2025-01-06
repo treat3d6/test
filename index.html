@@ -5,7 +5,7 @@
     <meta charset="utf-8">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/papaparse/5.4.1/papaparse.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js"></script>
 </head>
@@ -24,6 +24,11 @@
             const [loading, setLoading] = React.useState(true);
             const [error, setError] = React.useState(null);
             const [currentDate, setCurrentDate] = React.useState('');
+            const [selectedSong, setSelectedSong] = React.useState(null);
+            const [songHistory, setSongHistory] = React.useState([]);
+            const [showHistoryModal, setShowHistoryModal] = React.useState(false);
+            const [loadingHistory, setLoadingHistory] = React.useState(false);
+            const [allDates, setAllDates] = React.useState([]);
 
             const [albums, setAlbums] = React.useState([
                 { title: "Up 2 Më", streams: 0, daily: 0, tracks: 0 },
@@ -37,6 +42,44 @@
                 { title: "LYFESTYLE", streams: 0, daily: 0, tracks: 0 }
             ]);
 
+            const loadSongHistory = async (song) => {
+                setLoadingHistory(true);
+                try {
+                    const history = [];
+                    for (const date of allDates) {
+                        const csvResponse = await fetch(`./data/${date}.csv`);
+                        if (!csvResponse.ok) continue;
+                        const text = await csvResponse.text();
+                        
+                        window.Papa.parse(text, {
+                            header: true,
+                            skipEmptyLines: true,
+                            complete: (results) => {
+                                const songData = results.data.find(row => row.Song === song.title);
+                                if (songData) {
+                                    history.push({
+                                        date,
+                                        streams: parseInt(songData['Spotify total'].replace(/,/g, '')) || 0,
+                                        daily: parseInt(songData['Spotify daily'].replace(/,/g, '')) || 0
+                                    });
+                                }
+                            }
+                        });
+                    }
+                    setSongHistory(history.sort((a, b) => new Date(a.date) - new Date(b.date)));
+                } catch (err) {
+                    console.error('Error loading history:', err);
+                } finally {
+                    setLoadingHistory(false);
+                }
+            };
+
+            const handleSongClick = async (song) => {
+                setSelectedSong(song);
+                setShowHistoryModal(true);
+                await loadSongHistory(song);
+            };
+
             React.useEffect(() => {
                 const loadData = async () => {
                     try {
@@ -44,6 +87,7 @@
                         const response = await fetch('./dates.json');
                         if (!response.ok) throw new Error('Failed to load dates.json');
                         const data = await response.json();
+                        setAllDates(data.dates);
                         
                         if (data.dates && data.dates.length > 0) {
                             const latestDate = data.dates[data.dates.length - 1];
@@ -53,7 +97,7 @@
                             if (!csvResponse.ok) throw new Error('Failed to load CSV');
                             const text = await csvResponse.text();
                             
-                            Papa.parse(text, {
+                            window.Papa.parse(text, {
                                 header: true,
                                 skipEmptyLines: true,
                                 complete: (results) => {
@@ -230,7 +274,8 @@
                                     {filteredData[activeTab].map((item, index) => (
                                         <tr 
                                             key={item.title} 
-                                            className={index % 2 === 0 ? 'bg-black' : 'bg-white/5'}
+                                            className={`${index % 2 === 0 ? 'bg-black' : 'bg-white/5'} ${activeTab === 'songs' ? 'cursor-pointer hover:bg-white/10' : ''}`}
+                                            onClick={() => activeTab === 'songs' && handleSongClick(item)}
                                         >
                                             <td className="px-2 sm:px-4 py-2 text-xs sm:text-sm text-white/60">{index + 1}</td>
                                             <td className="px-2 sm:px-4 py-2 text-xs sm:text-sm text-white">
@@ -254,6 +299,55 @@
                             </table>
                         </div>
                     </div>
+
+                    {/* History Modal */}
+                    {showHistoryModal && selectedSong && (<div className="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50">
+                            <div className="bg-black border border-white/10 rounded-lg shadow-2xl p-6 max-w-3xl w-full max-h-[90vh] overflow-y-auto">
+                                <div className="flex justify-between items-center mb-4">
+                                    <h2 className="text-xl font-bold text-white">{selectedSong.title}</h2>
+                                    <button
+                                        className="text-white/60 hover:text-white"
+                                        onClick={() => setShowHistoryModal(false)}
+                                    >
+                                        ✕
+                                    </button>
+                                </div>
+                                
+                                {loadingHistory ? (
+                                    <div className="text-white/60 text-center py-8">
+                                        Loading history...
+                                    </div>
+                                ) : (
+                                    <div className="space-y-4">
+                                        <div className="overflow-x-auto">
+                                            <table className="min-w-full">
+                                                <thead>
+                                                    <tr className="border-b border-white/10">
+                                                        <th className="text-left p-2 text-white/80">Date</th>
+                                                        <th className="text-right p-2 text-white/80">Total Streams</th>
+                                                        <th className="text-right p-2 text-white/80">Daily</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {songHistory.map((entry, index) => (
+                                                        <tr key={entry.date} className={index % 2 === 0 ? 'bg-black' : 'bg-white/5'}>
+                                                            <td className="p-2 text-white">{entry.date}</td>
+                                                            <td className="p-2 text-right text-white/80">
+                                                                {entry.streams.toLocaleString()}
+                                                            </td>
+                                                            <td className="p-2 text-right text-white/80">
+                                                                {entry.daily.toLocaleString()}
+                                                            </td>
+                                                        </tr>
+                                                    ))}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    )}
                 </div>
             );
         };

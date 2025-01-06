@@ -144,22 +144,32 @@
             };
 
             const getSortedData = (data) => {
-                if (!sortConfig.key) return data;
+    if (!sortConfig.key) return data;
 
-                return [...data].sort((a, b) => {
-                    if (sortConfig.key === 'title' || sortConfig.key === 'album') {
-                        if (sortConfig.direction === 'asc') {
-                            return a[sortConfig.key].localeCompare(b[sortConfig.key]);
-                        }
-                        return b[sortConfig.key].localeCompare(a[sortConfig.key]);
-                    }
-                    
-                    if (sortConfig.direction === 'asc') {
-                        return a[sortConfig.key] - b[sortConfig.key];
-                    }
-                    return b[sortConfig.key] - a[sortConfig.key];
-                });
-            };
+    return [...data].sort((a, b) => {
+        // Convert strings to numbers for stream and daily comparisons
+        let aValue = a[sortConfig.key];
+        let bValue = b[sortConfig.key];
+        
+        if (sortConfig.key === 'streams' || sortConfig.key === 'daily') {
+            // Make sure we're comparing numbers
+            aValue = parseInt(aValue.toString().replace(/,/g, ''));
+            bValue = parseInt(bValue.toString().replace(/,/g, ''));
+        }
+
+        if (sortConfig.key === 'title' || sortConfig.key === 'album') {
+            if (sortConfig.direction === 'asc') {
+                return aValue.localeCompare(bValue);
+            }
+            return bValue.localeCompare(aValue);
+        }
+        
+        if (sortConfig.direction === 'asc') {
+            return aValue - bValue;
+        }
+        return bValue - aValue;
+    });
+};
 
             const filteredData = {
                 songs: getSortedData(songs.filter(song => 
